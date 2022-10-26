@@ -45,7 +45,21 @@ impl Emulator {
     }
 
     fn assembler(&mut self) {
-        // TODO
+        self.rom[0] = Emulator::ldh(REG0, 0);
+        self.rom[1] = Emulator::ldl(REG0, 0);
+        self.rom[2] = Emulator::ldh(REG1, 0);
+        self.rom[3] = Emulator::ldl(REG1, 1);
+        self.rom[4] = Emulator::ldh(REG2, 0);
+        self.rom[5] = Emulator::ldl(REG2, 0);
+        self.rom[6] = Emulator::ldh(REG3, 0);
+        self.rom[7] = Emulator::ldl(REG3, 10);
+        self.rom[8] = Emulator::add(REG2, REG1);
+        self.rom[9] = Emulator::add(REG0, REG2);
+        self.rom[10] = Emulator::st(REG0, 64);
+        self.rom[11] = Emulator::cmp(REG2, REG3);
+        self.rom[12] = Emulator::je(14);
+        self.rom[13] = Emulator::jmp(8);
+        self.rom[14] = Emulator::hlt();
     }
 
     fn mov(ra: u16, rb: u16) -> u16 {
