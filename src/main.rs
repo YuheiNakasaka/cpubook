@@ -42,6 +42,92 @@ impl Emulator {
         let mut pc: u16 = 0;
         let mut ir: u16 = 0;
         let mut flag_eq: u16 = 0;
+        self.assembler();
+
+        while Emulator::op_code(ir) != HLT {
+            ir = self.rom[pc as usize];
+            println!(
+                "{} {} {} {} {} {}",
+                pc, ir, self.reg[0], self.reg[1], self.reg[2], self.reg[3]
+            );
+
+            pc = pc + 1;
+
+            match Emulator::op_code(ir) {
+                MOV => {
+                    self.reg[Emulator::op_reg_a(ir) as usize] =
+                        self.reg[Emulator::op_reg_b(ir) as usize]
+                }
+                ADD => {
+                    self.reg[Emulator::op_reg_a(ir) as usize] = self.reg
+                        [Emulator::op_reg_a(ir) as usize]
+                        + self.reg[Emulator::op_reg_b(ir) as usize]
+                }
+                SUB => {
+                    self.reg[Emulator::op_reg_a(ir) as usize] = self.reg
+                        [Emulator::op_reg_a(ir) as usize]
+                        - self.reg[Emulator::op_reg_b(ir) as usize]
+                }
+                AND => {
+                    self.reg[Emulator::op_reg_a(ir) as usize] = self.reg
+                        [Emulator::op_reg_a(ir) as usize]
+                        & self.reg[Emulator::op_reg_b(ir) as usize]
+                }
+                OR => {
+                    self.reg[Emulator::op_reg_a(ir) as usize] = self.reg
+                        [Emulator::op_reg_a(ir) as usize]
+                        | self.reg[Emulator::op_reg_b(ir) as usize]
+                }
+                SL => {
+                    self.reg[Emulator::op_reg_a(ir) as usize] =
+                        self.reg[Emulator::op_reg_a(ir) as usize] << 1
+                }
+                SR => {
+                    self.reg[Emulator::op_reg_a(ir) as usize] =
+                        self.reg[Emulator::op_reg_a(ir) as usize] >> 1
+                }
+                SRA => {
+                    self.reg[Emulator::op_reg_a(ir) as usize] =
+                        (self.reg[Emulator::op_reg_a(ir) as usize] & 0x8000)
+                            | (self.reg[Emulator::op_reg_a(ir) as usize] >> 1)
+                }
+                LDL => {
+                    self.reg[Emulator::op_reg_a(ir) as usize] =
+                        (self.reg[Emulator::op_reg_a(ir) as usize] & 0xff00)
+                            | (Emulator::op_data(ir) & 0x00ff)
+                }
+                LDH => {
+                    self.reg[Emulator::op_reg_a(ir) as usize] = (Emulator::op_data(ir) << 8)
+                        | (self.reg[Emulator::op_reg_a(ir) as usize] & 0x00ff)
+                }
+                CMP => {
+                    if self.reg[Emulator::op_reg_a(ir) as usize]
+                        == self.reg[Emulator::op_reg_b(ir) as usize]
+                    {
+                        flag_eq = 1;
+                    } else {
+                        flag_eq = 0;
+                    }
+                }
+                JE => {
+                    if flag_eq == 1 {
+                        pc = Emulator::op_addr(ir)
+                    }
+                }
+                JMP => pc = Emulator::op_addr(ir),
+                LD => {
+                    self.reg[Emulator::op_reg_a(ir) as usize] =
+                        self.ram[Emulator::op_addr(ir) as usize]
+                }
+                ST => {
+                    self.ram[Emulator::op_addr(ir) as usize] =
+                        self.reg[Emulator::op_reg_a(ir) as usize]
+                }
+                _ => (),
+            }
+        }
+
+        println!("ram[64] = {}", self.ram[64]);
     }
 
     fn assembler(&mut self) {
@@ -130,11 +216,11 @@ impl Emulator {
         return ir >> 11;
     }
 
-    fn op_regA(ir: u16) -> u16 {
+    fn op_reg_a(ir: u16) -> u16 {
         return ir >> 8 & 0x0007;
     }
 
-    fn op_regB(ir: u16) -> u16 {
+    fn op_reg_b(ir: u16) -> u16 {
         return ir >> 5 & 0x0007;
     }
 
@@ -148,7 +234,8 @@ impl Emulator {
 }
 
 fn main() {
-    Emulator::new();
+    let mut emulator = Emulator::new();
+    emulator.run();
 }
 
 #[cfg(test)]
@@ -196,9 +283,9 @@ mod test {
         // 0 1000 00000000000
         assert_eq!(Emulator::op_code(32768u16), 16u16);
         // 0 0000 100 00000000
-        assert_eq!(Emulator::op_regA(1024u16), 4u16);
+        assert_eq!(Emulator::op_reg_a(1024u16), 4u16);
         // 0 0000 000 100 00000
-        assert_eq!(Emulator::op_regB(128u16), 4u16);
+        assert_eq!(Emulator::op_reg_b(128u16), 4u16);
         // 0 0000 001 10000000
         assert_eq!(Emulator::op_data(384u16), 128u16);
         // 0 0000 001 00000001
